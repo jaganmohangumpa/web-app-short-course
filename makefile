@@ -56,7 +56,10 @@ write-version:
 	echo `git rev-parse HEAD` >> ${CODE_DIR}/${VER_FILE}
 	echo `git log --pretty=format:'%s' -n 1` >> ${CODE_DIR}/${VER_FILE}
 
-lint:
+install-pep:
+	sudo pip install pep8
+
+lint:  install-pep
 	pep8 --ignore=E302 ${PWD}/${CODE_DIR} > ${LINT_FILE};
 
 build-with-lint: build lint

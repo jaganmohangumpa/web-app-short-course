@@ -1,0 +1,85 @@
+#+TITLE: Data Model of the User Directory Application
+#+AUTHOR: VLEAD
+#+DATE: [2016-05-11 Wed]
+#+PROPERTY: results output
+#+PROPERTY: exports code
+#+SETUPFILE: ../org-templates/level-1.org
+#+options: ^:nil
+#+LATEX: Literal LaTeX code for export
+
+
+* System
+  A system is defined by the entities contained in it and the relationships
+  between these entities. 
+
+** Entities in the System
+  The system is composed of User, Email, Name, Role
+  and a Session entities.
+
+** Relationships between the entities in the system
+
+*** Symbol Definitions
+
+    1. ! denotes exactly one
+    2. ? denotes at most one (zero or one)
+    3. + denotes at least one (one or more)
+    4. > denotes a relationship
+    5. [a,b] denotes both a is inverse of b
+   
+*** Entity Relationships
+
+    1. [email, user] : User? > Email! :: implies 
+       - email is a relation with domain as User and co-domain of exactly one
+         email.  (email : User > Email!)
+       - user is a relation with domain as Email and co-domain of atmost one
+         User. (user: Email > User?)
+       - user is inverse of email
+  
+*** Realization of the system  
+    
+#+BEGIN_SRC python :tangle src/entities.py :eval no
+class User:
+    
+    def __init__(email, name):
+        pass
+#+END_SRC
+
+#+BEGIN_SRC python :tangle src/entities.py :eval no
+class Email:
+    def __init__():
+        pass
+#+END_SRC
+
+#+BEGIN_SRC python :tangle src/entities.py :eval no
+class Name:
+    def __init__():
+        pass
+#+END_SRC
+
+#+BEGIN_SRC python :tangle src/entities.py :eval no
+class Role:
+    def __init__():
+        pass
+#+END_SRC
+
+#+BEGIN_SRC python :tangle src/entities.py :eval no
+class Session:
+    def __init__():
+        pass
+#+END_SRC
+
+
+* State of the system
+  The state of the system is comprised of sets of *users*, *emails*, *names*,
+  *roles* and *sessions*.
+  
+  
+  
+
+     
+
+
+         
+     
+
+  
