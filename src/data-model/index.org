@@ -174,7 +174,6 @@ import re
 
 * Object Relational Model
 
-
 ** Custom Exceptions
    These are some of the custom exceptions used in the application.
 
@@ -191,6 +190,7 @@ class AttributeRequired(Exception):
         return repr(self.str)
 
 #+END_SRC
+
 
 
 
@@ -223,6 +223,85 @@ def is_email(value):
 
 
 
+*** Other function for REST
+
+#+BEGIN_SRC python :tangle ../src/utils.py :eval no
+
+# module to hold all utilities/helper functions
+
+# return a list of dicts as json with correct mime types
+# flask does not provide a jsonify for lists; hence this method
+def jsonify_list(data):
+    if type(data) is not list:
+        raise Exception('jsonify_list function accepts only a list')
+
+    return make_response(json.dumps(data), 200,
+                         {'content-type': 'application/json'})
+
+
+# take in a flask request object and try to parse out a dictionary from the
+# request
+# try to find if request is as JSON first, then look into forms, finally force
+# find it.
+# If not found return a dict; else return the parsed data
+def parse_request(request):
+    if request.json:
+        # print 'found in request.json'
+        data = request.get_json()
+
+    elif request.data:
+        # print 'found in request.data'
+        data = json.loads(request.data)
+
+    elif request.form:
+        # print 'found in request.form'
+        data = request.form.to_dict()
+        # try to detect if form contains integers and boolean data and attempt
+        # to convert them
+        # FIXME: is this a good idea? Fix this to do it in a better way?
+        for k in data:
+            if is_number(data[k]):
+                data[k] = int(data[k])
+            if is_bool_in_str(data[k]):
+                data[k] = str_to_bool(data[k])
+
+            # print k, data[k]
+
+    else:
+        data = request.get_json(force=True)
+
+    if not data:
+        return False
+
+    return data
+
+
+# check if a given string is a number
+def is_number(s):
+    try:
+        float(s)
+        return True
+    except ValueError:
+        return False
+
+
+# check if in a given string python bool types are represented
+def is_bool_in_str(s):
+    if s == "True" or s == "False":
+        return True
+    return False
+
+
+# convert python bool types in string to native bool types
+def str_to_bool(s):
+    if s == "True":
+        return True
+    if s == "False":
+        return False
+    return None
+#+END_SRC
+
+
 ** Name
 
 *** Construction
@@ -244,6 +323,7 @@ class Name(object):
     def __str__(self):
         return self.value
 #+END_SRC
+
 
 *** Test the Construction
 #+BEGIN_SRC python :tangle ../tests/test_db.py :eval no
@@ -272,6 +352,7 @@ class TestName(TestCase):
 
 
 ** Email
+
 *** Construction
 
      Email is a type as defined in RFC [[https://tools.ietf.org/html/rfc5321][5321]], [[https://tools.ietf.org/html/rfc5322][5322]] and [[https://tools.ietf.org/html/rfc6531][6531]].
@@ -705,13 +786,74 @@ class TestRole(TestCase):
 *** Functions
 
 **** setName
-
+***** Implementation
 #+BEGIN_SRC python :tangle ../src/db.py :eval no
     def set_name(self, name):
         if not isinstance(name, Name):
             raise TypeError('`name` argument should be of type Name.')
         else:
             self.name = name.value
+#+END_SRC
+
+****** Test
+#+BEGIN_SRC python :tangle ../tests/test_db.py :eval no
+    def test_role_set_name(self):
+        print "test_role_set_name"
+        role = Role(name=Name("admin"))
+        role.save()
+        role.set_name(Name("owner"))
+        role.save()
+        role = Role.get_by_id(1)
+        self.assertEqual(role.name, "owner")
+#+END_SRC
+
+
+**** setUsers Role, Users ---> NIL
+
+***** Implementation
+#+BEGIN_SRC python :tangle ../src/db.py :eval no
+    def set_users(self, users):
+        type_error = False
+        for user in users:
+            if not isinstance(user, User):
+                type_error = True
+                break
+
+        if not type_error:
+            self.users = users
+        else:
+            raise TypeError('`user` argument should be of type User.')
+#+END_SRC
+
+***** Test setUsers to a role
+#+BEGIN_SRC python :tangle ../tests/test_db.py :eval no
+    def test_set_users_to_role(self):
+        print "test_set_users_to_role"
+        user = User(name=Name("Robin Smith"), 
+                    email=Email("smith@gmail.com"),
+                    roles=[])
+
+        user.save()
+        user = User(name=Name("Fela Kuti"), 
+                    email=Email("fela@gmail.com"),
+                    roles=[])
+        user.save()
+        print "======"
+        users = User.get_all()
+        for user in users:
+            print user.to_client()
+
+        role1 = Role(name=Name("admin"))
+        role2 = Role(name=Name("user"))
+        role1.set_users(users[0:1])
+        role2.set_users(users)
+        role1.save()
+        role2.save()
+        users = User.get_all()
+        for user in users:
+            print user.to_client()
+        self.assertEqual(len(users[1].roles), 1)
+        self.assertEqual(len(users[0].roles), 2)
 #+END_SRC
 
 
@@ -728,6 +870,7 @@ class TestRole(TestCase):
     def get_users(self):
         return self.users
 #+END_SRC
+
 
 **** getId
 
@@ -802,9 +945,14 @@ class TestRole(TestCase):
 #+END_SRC
 
 
+
+
 * Run Test Cases
  
 #+BEGIN_SRC python :tangle ../tests/test_db.py :eval no
 if __name__ == '__main__':
     unittest.main()
 #+END_SRC
+
+
+
