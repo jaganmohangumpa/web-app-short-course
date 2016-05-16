@@ -17,7 +17,7 @@ LINT_FILE=${PWD}/${CODE_DIR}/lint_output
 EXIT_FILE=${PWD}/exit.txt
 STATUS=0
 
-all:  build-with-lint
+all:  build
 
 clean-literate:
 	rm -rf ${ELISP_DIR}
