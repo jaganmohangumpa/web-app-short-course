@@ -208,7 +208,6 @@ actor performing the operation.
 
 
 * Implementation
-
 ** Relationships between the entities in the system
 *** COMMENT Realization of the system  
     
