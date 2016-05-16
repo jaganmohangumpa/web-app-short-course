@@ -8,9 +8,63 @@
 #+LATEX: Literal LaTeX code for export
 
 
-* System
-  A system is defined by the entities contained in it and the relationships
-  between these entities. 
+* Abstract Entity Types
+
+** User
+** Email
+** Name
+** Role 
+** Session
+
+* Relations with cardinality constraints over entity types 
+For each relation, we define its inverse next to it.
+#+begin_src spec :tangle spec.txt
+[email, user]  :  User?    > Email!
+[name, user]   :  User     > Name!
+[role, user]   :  User     > Role
+[user, session]:  Session? > User!
+[role, session]:  Session  > Role!
+#+end_src
+
+* Disjoint Unions
+
+#+begin_src spec :tangle spec.txt
+Role = guest + user + admin + owner
+#+end_src
+* System state
+
+  The system's state is captured by a set of /state
+  variables/.  
+
+
+
+** Entity sets
+
+ #+begin_src spec :tangle spec.txt
+ *users*    : set[User]   set of users in the system.
+ *emails*   : set[Email]  set of emails in the system.
+ *names*    : set[Name]   set of names in the system.
+ *roles*    : set[Role]   set of roles of all users.
+ *sessions* : set[Session] set of sessions in the system.
+ #+end_src
+
+
+
+** Relations 
+
+These specifications also capture referential integrity.
+
+#+begin_src spec :tangle spec.txt
+[email, user]   :  users-set      > emails-set
+[name, user]    :  users-set      > names-set
+[role, user]    :  users-set      > roles-set
+[user, session] :  sessions-set?  > users-set
+[role, session] :  sessions-set   > roles-set
+#+end_src
+
+* Other constraints
+
+
 
 ** Entities in the System
   The system is composed of User, Email, Name, Role
