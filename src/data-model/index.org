@@ -6,89 +6,210 @@
 #+SETUPFILE: ../org-templates/level-1.org
 #+options: ^:nil
 #+LATEX: Literal LaTeX code for export
+* Notation
+** Sets, cardinality and relations
+
+If =A= is a set, then 
+    1. =A!= denotes exactly one element of =A=.
+    2. =A?= denotes at most one element of =A=.
+    3. =A+= denotes at least one element of =A=
+    4. =A > B= denotes a relation /from/ =A= /to/ =B=.
+    5. =r: A > B= denotes a relation from =A= to =B=.
+   
+** Example of Entity Relationship notation
+    
+#+begin_example
+ [email, user] : User? > Email!
+#+end_example
+
+Encodes the following items of information:
+
+ - =email= is a relation /from/ the set =User= /to/ the set
+   =Email=.
+
+ - =User= is called the /domain/ of the relation =email=.
+
+ - =Email= is called the /codomain/ of the relation =email=.
+
+ - The relation =email= relates each element of =User= to
+   /exactly one/ element of =Email=.  This is written as 
+
+ #+begin_example
+ email: User > Email!
+ #+end_example
+
+ - =user= is a relation /from/ the set =Email= /to/ the set
+   =User=.
+
+ - =Email= is called the /domain/ of the relation =user=.
+
+ - =User= is called the /codomain/ of the relation =user=.
+
+ - The relation =user= relates each element of =Email= to
+   /at most one/ element of =User=.  This is written as 
+
+ #+begin_example
+ user: Email > User?
+ #+end_example
 
 
 * Abstract Entity Types
+#+begin_src spec :tangle spec.txt
+ User
+ Email
+ Name
+ Role
+ Session
+#+end_src
 
-** User
-** Email
-** Name
-** Role 
-** Session
-
-* Relations with cardinality constraints over entity types 
+* Relations and cardinality constraints over entity types 
 For each relation, we define its inverse next to it.
 #+begin_src spec :tangle spec.txt
 [email, user]  :  User?    > Email!
 [name, user]   :  User     > Name!
-[role, user]   :  User     > Role
+[roles, user]   :  User     > Role
 [user, session]:  Session? > User!
 [role, session]:  Session  > Role!
 #+end_src
 
-* Disjoint Unions
+** Keys
 
+An entity =K= is called a /key for/ an entity =A= if there
+is a relation =r: A? > K!=.
+
+
+|---------+------------+---+---+---|
+| Entity  | Key        |   |   |   |
+|---------+------------+---+---+---|
+| User    | Email      |   |   |   |
+|---------+------------+---+---+---|
+| Session | User, Role |   |   |   |
+|---------+------------+---+---+---|
+
+* Disjoint Unions
 #+begin_src spec :tangle spec.txt
 Role = guest + user + admin + owner
 #+end_src
 * System state
-
   The system's state is captured by a set of /state
   variables/.  
+** Primary Entity sets
 
-
-
-** Entity sets
+For the purpose of /the application/, we maintain two primary
+state variables.  
 
  #+begin_src spec :tangle spec.txt
- *users*    : set[User]   set of users in the system.
- *emails*   : set[Email]  set of emails in the system.
- *names*    : set[Name]   set of names in the system.
- *roles*    : set[Role]   set of roles of all users.
- *sessions* : set[Session] set of sessions in the system.
+ user-set    : set[User]    ; set of users in the system 
+ session-set : set[Session] ; set of sessions in the system
  #+end_src
 
+and five relations
 
-
-** Relations 
-
-These specifications also capture referential integrity.
-
-#+begin_src spec :tangle spec.txt
-[email, user]   :  users-set      > emails-set
-[name, user]    :  users-set      > names-set
-[role, user]    :  users-set      > roles-set
-[user, session] :  sessions-set?  > users-set
-[role, session] :  sessions-set   > roles-set
+ #+begin_src spec :tangle spec.txt
+  email:      User > Email!
+  name :      User > Name!
+  roles:      User > Role
+  user:       Session > User!
+  role:       Session > Role
 #+end_src
 
-* Other constraints
+*** Other constraints
+There is a predefined user called =guest= always a member of
+=user-set=.
+
+#+begin_src spec :tangle spec.txt
+ guest    : user-set    ; guest is a member of user set.
+#+end_src
 
 
+** Derived Entity sets
+ #+begin_src spec :tangle spec.txt
+ email-set   : set[Email]   = user-set.email             ; set of emails in the system
+ name-set    : set[Name]    = user-set.name              ; set of names in the system
+ role-set    : set[Role]    = user-set.roles.union        ; set of all roles of all users
+ logged-in-user-set : set[User]    = session-set.user   
+ logged-in-role-set :  set[Role]    = session-set.role
+ #+end_src
 
-** Entities in the System
-  The system is composed of User, Email, Name, Role
-  and a Session entities.
+** Referential Integrity Constraints over entity-sets
+These specifications also capture referential integrity.
+#+begin_src spec :tangle spec.txt
+[email, user]    :  user-set!       > email-set!    
+[name, users]    :  user-set+       > name-set!     
+[roles, users]   :  user-set+       > roles-set+   
+[role, session] :  session-set     >  role-set! ;a session has one role
+#+end_src
+
+
+** Each user may belong to only one session unless the user is =guest=.
+#+begin_src spec :tangle spec.txt
+user: session-set > user-set!
+session: {guest}  > session-set              ; a guest user could be in multiple sessions.
+session: user-set \ {guest}  > session-set?  ; non-guest user is in at most one session.
+#+end_src
+
+
+* Operations 
+CRUD operations.  
+
+Each operation is performed on an entity instance or an
+entity-set.   The operation may take additional parameters.
+It also takes as a  parameter of the credentials of the
+actor performing the operation.
+
+ - Create a user
+ - Read from a user
+ - Update a user
+ - Delete a user
+
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+| Object      | operation                                  | Credentials      | Ref. Integrity            | Result       |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+| user-set    | addUser(u:User, s:Session)                 | s.role=admin     | u:~user-set               | Succ or      |
+|             |                                            |                  |                           | Failure      |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | show(s:Session)                            | s.role>=guest    |                           |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | delUser(u:User, s:Session)                 | s.role=admin     | u:user-set                | Succ or Fail |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | getUserByEmail(e: Email, s:Session)        | s.role >= guest  |                           | return user  |
+|             |                                            |                  |                           | or Null      |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+| user        | makeUser(e: Email, n:Name, s: Session)     | s.role = admin   | e:~email-set              |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | getEmail(u: User, s:Session)               | s.role >= guest  | u:user-set                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | getName(u: User,  s:Session)               | s.role >= guest  | u:user-set                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | getRoles(u: User, s:Session)               | s.role >= guest  | u:user-set                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | setEmail(u: User, e:Email, s:Session)      | s.role =admin OR | u:user-set                |              |
+|             |                                            | s.user = u       |                           |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | setName(u: User, n:Name, s:Session)        | s.role =admin OR | u:user-set                |              |
+|             |                                            | s.user = u       |                           |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | setRoles(u: User, rs:set[Role], s:Session) | s.role=admin     | u:user-set                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | addRole(u: User, r:Role, s:Session)        | s.role=admin     | u:user-set AND            |              |
+|             |                                            |                  | r:~u.roles                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | delRole(u:User, r:Role, s:Session)         | s.role=admin     | u:user-set                |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+| session     | make-Session(u: user-set, r: Role)         |                  | r:u.roles                 |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+| session-set | addSession(ns:Session)                     |                  | ns.user = guest OR        |              |
+|             |                                            |                  | ns.user:~session-set.user |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | delSession(es:Session, s:Session)          | s.user=es.user   | es:session-set            |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+|             | showSessions(s:Session)                    | s.role=admin     |                           |              |
+|-------------+--------------------------------------------+------------------+---------------------------+--------------|
+
+
+* Implementation
 
 ** Relationships between the entities in the system
-
-*** Symbol Definitions
-
-    1. ! denotes exactly one
-    2. ? denotes at most one (zero or one)
-    3. + denotes at least one (one or more)
-    4. > denotes a relationship
-    5. [a,b] denotes both a is inverse of b
-   
-*** Entity Relationships
-
-    1. [email, user] : User? > Email! :: implies 
-       - email is a relation with domain as User and co-domain of exactly one
-         email.  (email : User > Email!)
-       - user is a relation with domain as Email and co-domain of atmost one
-         User. (user: Email > User?)
-       - user is inverse of email
-  
 *** COMMENT Realization of the system  
     
 #+BEGIN_SRC python :tangle src/entities.py :eval no
@@ -121,14 +242,6 @@ class Session:
     def __init__():
         pass
 #+END_SRC
-
-
-* State of the system
-  The state of the system is comprised of sets of *users*, *emails*, *names*,
-  *roles* and *sessions*.
-
-
-* Initialization
 
 ** Imports for Python API
 #+BEGIN_SRC python :tangle ../src/db.py :eval no
